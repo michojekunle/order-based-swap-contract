@@ -93,6 +93,10 @@ contract OrderBasedSwap {
             IERC20(orderToFill.tokenExpected).balanceOf(msg.sender) <
             orderToFill.amountExpected
         ) revert InsufficientTokensFromSender();
+        
+        // update order details --prevent reentrancy
+        orderToFill.filled = true;
+        orderToFill.filler = msg.sender;
 
         // transfer tokens from sender to depositor
         IERC20(orderToFill.tokenExpected).transferFrom(
@@ -107,9 +111,6 @@ contract OrderBasedSwap {
             orderToFill.amountDeposited
         );
 
-        // update order details
-        orderToFill.filled = true;
-        orderToFill.filler = msg.sender;
 
         emit OrderFilled(msg.sender, orderToFill);
     }
@@ -122,13 +123,13 @@ contract OrderBasedSwap {
             revert OnlyOwnerCanCancelOrder();
         if (orderToCancel.cancelled) revert OrderCancelledAlready();
         if (orderToCancel.filled) revert OrderFilledAlready();
+        
+        orderToCancel.cancelled = true; // prevent reentrancy
 
         IERC20(orderToCancel.tokenDeposited).transfer(
             orderToCancel.depositor,
             orderToCancel.amountDeposited
         );
-
-        orderToCancel.cancelled = true;
 
         emit OrderCancelled(orderToCancel);
     }
